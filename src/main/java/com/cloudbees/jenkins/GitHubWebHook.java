@@ -188,8 +188,21 @@ public class GitHubWebHook implements UnprotectedRootAction {
                     if (trigger!=null) {
                         LOGGER.fine("Considering to poke "+job.getFullDisplayName());
                         if (GitHubRepositoryNameContributor.parseAssociatedNames(job).contains(changedRepository)) {
-                            LOGGER.info("Poked "+job.getFullDisplayName());
-                            trigger.onPost(pusherName);
+                            boolean buildThis = false;
+                            JSONObject commits = JSONObject.fromObject(payload).getJSONArray("commits");
+                            for(JSONObject commit : commits) {
+                                if(commit.getString("message").matches("(?s).*\\bjenkins\\btest\\b.*")) {
+                                    LOGGER.debug(commit.getString("message") + " matched the regex")
+                                    buildThis = true;
+                                    break;
+                                } 
+                                else 
+                                    LOGGER.debug(commit.getString("message") + " did not match the regex")
+                            }
+                            if(buildThis) {
+                                LOGGER.info("Poked "+job.getFullDisplayName());
+                                trigger.onPost(pusherName);
+                            }
                         } else
                             LOGGER.fine("Skipped "+job.getFullDisplayName()+" because it doesn't have a matching repository.");
                     }
